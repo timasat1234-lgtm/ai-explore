@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Explore — безопасные маршруты</title>
+
+  <!-- Leaflet CSS (обязательно до своих стилей) -->
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Ваши стили -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Шапка -->
+  <header class="topbar">
+    <div class="logo">AI<span>-Explore</span></div>
+    <div class="city-switch">
+      <button data-city="karaganda" class="active">Караганда</button>
+      <button data-city="astana">Астана</button>
+      <button data-city="almaty">Алматы</button>
+    </div>
+  </header>
+
+  <!-- Панель управления -->
+  <aside class="panel">
+    <div class="mode-transport">
+  <button type="button" id="modeCar" class="transport-btn active">🚗 На машине</button>
+  <button type="button" id="modeFoot" class="transport-btn">🚶 Пешком</button>
+</div>
+    <label>Откуда</label>
+    <div class="input-wrap">
+      <input id="fromInput" type="text" placeholder="Введите улицу или кликните на карту" autocomplete="off">
+      <ul id="fromSuggest" class="suggestions"></ul>
+    </div>
+
+    <label>Куда</label>
+    <div class="input-wrap">
+      <input id="toInput" type="text" placeholder="Введите улицу или кликните на карту" autocomplete="off">
+      <ul id="toSuggest" class="suggestions"></ul>
+    </div>
+
+    <button id="routeBtn" class="primary">Построить маршрут</button>
+
+    <div id="routeInfo" class="route-info"></div>
+
+    <div class="gemini-block">
+      <h3>🤖 ИИ-гид</h3>
+      <div id="geminiOutput">Здесь появится объяснение маршрута.</div>
+    </div>
+  </aside>
+
+  <!-- Карта -->
+  <div id="map"></div>
+
+  <!-- Leaflet JS (обязательно до app.js) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Ваши скрипты: сначала config, потом addresses подгрузится из app.js -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
