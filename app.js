@@ -202,19 +202,12 @@ async function buildRoute() {
   }
 }
 
-// ===== 8. GEMINI — КЛЮЧ AQ. ЧЕРЕЗ URL-ПАРАМЕТР =====
+// ===== 8. GEMINI — ЧЕРЕЗ СЕРВЕР NETLIFY =====
 async function askGemini(prompt) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${window.CONFIG.GEMINI_MODEL}:generateContent`;
-
-  const res = await fetch(url, {
+  const res = await fetch('/api/gemini', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': window.CONFIG.GEMINI_API_KEY
-    },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }]
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt })
   });
 
   if (!res.ok) {
@@ -223,8 +216,9 @@ async function askGemini(prompt) {
   }
 
   const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Нет ответа';
+  return data.text || 'Нет ответа';
 }
+
 async function explainRoute(route) {
   const output = document.getElementById('geminiOutput');
   output.textContent = 'ИИ-гид готовит объяснение...';
