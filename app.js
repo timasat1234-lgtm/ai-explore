@@ -12,7 +12,7 @@ const map = L.map('map', {
   maxBounds: KZ_BOUNDS,
   maxBoundsViscosity: 1.0,
   minZoom: 5,
-  maxZoom: 18
+  maxZoom: 19
 }).setView(CITIES.karaganda.center, CITIES.karaganda.zoom);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -58,6 +58,23 @@ async function searchAddress(query) {
   }
 }
 
+// Универсальная функция: ищет адрес и летит к нему
+async function goToAddress(query, setter) {
+  if (!query || query.trim().length < 3) return;
+  const results = await searchAddress(query.trim());
+  if (!results.length) {
+    alert('Адрес не найден: ' + query);
+    return;
+  }
+  const first = results[0];
+  setter(first.latlng);
+  // Летим к зданию и приближаемся
+  map.flyTo(first.latlng, 17, { duration: 1.2 });
+  // Обновляем поле ввода красивым названием
+  const inputId = setter === setFrom ? 'fromInput' : 'toInput';
+  document.getElementById(inputId).value = first.label;
+}
+
 function attachAutocomplete(inputId, suggestId, setter) {
   const input = document.getElementById(inputId);
   const list = document.getElementById(suggestId);
@@ -94,10 +111,21 @@ function attachAutocomplete(inputId, suggestId, setter) {
           input.value = item.label;
           list.classList.remove('visible');
           setter(item.latlng);
+          // Летим к выбранному зданию и приближаемся
+          map.flyTo(item.latlng, 17, { duration: 1.2 });
         });
         list.appendChild(li);
       });
     }, 350);
+  });
+
+  // Enter — искать адрес без выбора из списка
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      list.classList.remove('visible');
+      goToAddress(input.value, setter);
+    }
   });
 
   document.addEventListener('click', (e) => {
@@ -127,28 +155,41 @@ async function resolveAddressIfNeeded(inputId, currentPoint, setter) {
 }
 
 // ===== 5. УСТАНОВКА ТОЧЕК =====
-function setFrom(latlng) {
+function setFrom(latlng, label) {
   fromPoint = latlng;
   if (fromMarker) map.removeLayer(fromMarker);
-  fromMarker = L.marker(latlng, { draggable: true }).addTo(map).bindPopup('Откуда').openPopup();
-  fromMarker.on('dragend', (e) => { fromPoint = e.target.getLatLng(); });
-  document.getElementById('fromInput').value =
-    `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+  const popup = label ? 'Откуда: ' + label : 'Откуда';
+  fromMarker = L.marker(latlng, { draggable: true }).addTo(map).bindPopup(popup).openPopup();
+  fromMarker.on('dragend', (e) => {
+    fromPoint = e.target.getLatLng();
+    document.getElementById('fromInput').value =
+      `${fromPoint.lat.toFixed(5)}, ${fromPoint.lng.toFixed(5)}`;
+  });
 }
 
-function setTo(latlng) {
+function setTo(latlng, label) {
   toPoint = latlng;
   if (toMarker) map.removeLayer(toMarker);
-  toMarker = L.marker(latlng, { draggable: true }).addTo(map).bindPopup('Куда').openPopup();
-  toMarker.on('dragend', (e) => { toPoint = e.target.getLatLng(); });
-  document.getElementById('toInput').value =
-    `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+  const popup = label ? 'Куда: ' + label : 'Куда';
+  toMarker = L.marker(latlng, { draggable: true }).addTo(map).bindPopup(popup).openPopup();
+  toMarker.on('dragend', (e) => {
+    toPoint = e.target.getLatLng();
+    document.getElementById('toInput').value =
+      `${toPoint.lat.toFixed(5)}, ${toPoint.lng.toFixed(5)}`;
+  });
 }
 
 // ===== 6. КЛИК ПО КАРТЕ =====
 map.on('click', (e) => {
-  if (activeField === 'from') setFrom(e.latlng);
-  else setTo(e.latlng);
+  if (activeField === 'from') {
+    setFrom(e.latlng);
+    document.getElementById('fromInput').value =
+      `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+  } else {
+    setTo(e.latlng);
+    document.getElementById('toInput').value =
+      `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+  }
 });
 
 document.getElementById('fromInput').addEventListener('focus', () => activeField = 'from');
@@ -252,7 +293,6 @@ async function explainRoute(route) {
     const text = await askGroq(prompt);
     output.textContent = text;
   } catch (e) {
-    // Если Groq не работает — показываем заготовленный текст
     console.warn('Groq недоступен, использую заготовку:', e.message);
     const template = FALLBACK_TEXTS[Math.floor(Math.random() * FALLBACK_TEXTS.length)];
     output.textContent = template.replace(/{km}/g, km).replace(/{min}/g, min);
