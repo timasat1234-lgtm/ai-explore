@@ -35,21 +35,16 @@ function formatPhotonLabel(p) {
   const parts = [];
   if (p.name) parts.push(p.name);
   else if (p.street) parts.push(p.street);
-
   if (p.housenumber) parts.push(p.housenumber);
-
   if (p.city && p.city !== p.name) parts.push(p.city);
   else if (p.district) parts.push(p.district);
-
   return parts.join(', ');
 }
 
 async function searchAddress(query) {
   if (!query || query.length < 3) return [];
-
   const cityBias = CITIES[currentCity].center;
   const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lang=ru&lat=${cityBias[0]}&lon=${cityBias[1]}`;
-
   try {
     const res = await fetch(url);
     const data = await res.json();
@@ -71,7 +66,6 @@ function attachAutocomplete(inputId, suggestId, setter) {
 
   input.addEventListener('input', () => {
     activeField = inputId === 'fromInput' ? 'from' : 'to';
-
     clearTimeout(debounceTimer);
     const myId = ++requestId;
 
@@ -82,12 +76,10 @@ function attachAutocomplete(inputId, suggestId, setter) {
         list.classList.remove('visible');
         return;
       }
-
       list.innerHTML = '<li style="color:#6b7a99;cursor:default">Поиск...</li>';
       list.classList.add('visible');
 
       const results = await searchAddress(q);
-
       if (myId !== requestId) return;
 
       list.innerHTML = '';
@@ -95,7 +87,6 @@ function attachAutocomplete(inputId, suggestId, setter) {
         list.innerHTML = '<li style="color:#6b7a99;cursor:default">Ничего не найдено</li>';
         return;
       }
-
       results.forEach(item => {
         const li = document.createElement('li');
         li.textContent = item.label;
@@ -127,7 +118,6 @@ async function resolveAddressIfNeeded(inputId, currentPoint, setter) {
   if (currentPoint) return currentPoint;
   const text = document.getElementById(inputId).value.trim();
   if (!text) return null;
-
   const results = await searchAddress(text);
   if (results.length) {
     setter(results[0].latlng);
@@ -192,7 +182,6 @@ async function buildRoute() {
   try {
     const res = await fetch(url);
     const data = await res.json();
-
     if (data.code !== 'Ok') throw new Error('Маршрут не найден');
 
     const route = data.routes[0];
@@ -205,7 +194,6 @@ async function buildRoute() {
     const km = (route.distance / 1000).toFixed(2);
     const min = Math.round(route.duration / 60);
     const icon = transportMode === 'car' ? '🚗' : '🚶';
-
     document.getElementById('routeInfo').textContent = `${icon} ${km} км · ⏱️ ${min} мин`;
 
     await explainRoute(route);
@@ -214,16 +202,14 @@ async function buildRoute() {
   }
 }
 
-// ===== 8. GEMINI — КЛЮЧ AQ. ПЕРЕДАЁТСЯ ЧЕРЕЗ BEARER =====
+// ===== 8. GEMINI — КЛЮЧ AQ. ЧЕРЕЗ URL-ПАРАМЕТР =====
 async function askGemini(prompt) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${window.CONFIG.GEMINI_MODEL}:generateContent`;
+  const key = window.CONFIG.GEMINI_API_KEY;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${window.CONFIG.GEMINI_MODEL}:generateContent?key=${encodeURIComponent(key)}`;
 
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${window.CONFIG.GEMINI_API_KEY}`
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }]
     })
@@ -274,7 +260,6 @@ function setTransportMode(mode) {
   transportMode = mode;
   document.getElementById('modeCar').classList.toggle('active', mode === 'car');
   document.getElementById('modeFoot').classList.toggle('active', mode === 'foot');
-
   if (fromPoint && toPoint && routeLine) {
     buildRoute();
   }
