@@ -214,7 +214,7 @@ async function buildRoute() {
   }
 }
 
-// ===== 8. GEMINI — КЛЮЧ ЧЕРЕЗ ЗАГОЛОВОК (x-goog-api-key) =====
+// ===== 8. GEMINI — КЛЮЧ AQ. ПЕРЕДАЁТСЯ ЧЕРЕЗ BEARER =====
 async function askGemini(prompt) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${window.CONFIG.GEMINI_MODEL}:generateContent`;
 
@@ -222,7 +222,7 @@ async function askGemini(prompt) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-goog-api-key': window.CONFIG.GEMINI_API_KEY
+      'Authorization': `Bearer ${window.CONFIG.GEMINI_API_KEY}`
     },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }]
