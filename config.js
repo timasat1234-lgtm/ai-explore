@@ -1,8 +1,7 @@
 window.CONFIG = {
-  GEMINI_API_KEY: 'AQ.Ab8RN6LB1y-358bKwwcvtw4jpGGClr8bb95L_spRHFWFs8MyIQ',
-  GEMINI_MODEL: 'gemini-2.5-flash',
+  GROQ_API_KEY: 'ВСТАВЬТЕ_СЮДА_ВАШ_КЛЮЧ_gsk_...',
+  GROQ_MODEL: 'llama-3.3-70b-versatile',
 
-  // Два профиля OSRM на сервере FOSSGIS
   OSRM_CAR:  'https://routing.openstreetmap.de/routed-car/route/v1/driving',
   OSRM_FOOT: 'https://routing.openstreetmap.de/routed-foot/route/v1/foot',
 
