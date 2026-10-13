@@ -30,7 +30,7 @@ let routeLine = null;
 let transportMode = 'car';
 let currentCity = 'karaganda';
 
-// ===== 4. ПОИСК АДРЕСОВ ЧЕРЕЗ PHOTON =====
+// ===== 4. ПОИСК АДРЕСОВ =====
 function formatPhotonLabel(p) {
   const parts = [];
   if (p.name) parts.push(p.name);
@@ -41,10 +41,9 @@ function formatPhotonLabel(p) {
   return parts.join(', ');
 }
 
-async function searchAddress(query) {
-  if (!query || query.length < 3) return [];
-  const cityBias = CITIES[currentCity].center;
-  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lang=ru&lat=${cityBias[0]}&lon=${cityBias[1]}`;
+// Photon — быстрый поиск с подсказками
+async function photonSearch(query, bias) {
+  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lang=ru&lat=${bias[0]}&lon=${bias[1]}`;
   try {
     const res = await fetch(url);
     const data = await res.json();
@@ -53,24 +52,68 @@ async function searchAddress(query) {
       latlng: L.latLng(f.geometry.coordinates[1], f.geometry.coordinates[0])
     }));
   } catch (e) {
-    console.warn('Ошибка поиска адреса', e);
     return [];
   }
 }
 
-// Универсальная функция: ищет адрес и летит к нему
+// Nominatim — точный поиск (OpenStreetMap)
+async function nominatimSearch(query) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=6&countrycodes=kz&q=${encodeURIComponent(query)}`;
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'AI-Explore-Student-Project/1.0' }
+    });
+    const data = await res.json();
+    return data.map(item => ({
+      label: item.display_name,
+      latlng: L.latLng(parseFloat(item.lat), parseFloat(item.lon))
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
+// Умный поиск: 4 попытки — Photon → Photon без номера → Nominatim → Nominatim без номера
+async function searchAddress(query) {
+  if (!query || query.length < 3) return [];
+  const cityBias = CITIES[currentCity].center;
+  const cityName = { karaganda: 'Караганда', astana: 'Астана', almaty: 'Алматы' }[currentCity];
+
+  // Попытка 1: Photon с полным запросом
+  let results = await photonSearch(query, cityBias);
+  if (results.length) return results;
+
+  // Попытка 2: Photon без номера дома
+  const streetOnly = query.replace(/\s+\d+[а-яa-z]?$/i, '').trim();
+  if (streetOnly !== query) {
+    results = await photonSearch(streetOnly, cityBias);
+    if (results.length) return results;
+  }
+
+  // Попытка 3: Nominatim с городом
+  results = await nominatimSearch(query + ', ' + cityName);
+  if (results.length) return results;
+
+  // Попытка 4: Nominatim только с улицей
+  if (streetOnly !== query) {
+    results = await nominatimSearch(streetOnly + ', ' + cityName);
+    if (results.length) return results;
+  }
+
+  return [];
+}
+
+// Переход к адресу (для Enter)
 async function goToAddress(query, setter) {
   if (!query || query.trim().length < 3) return;
   const results = await searchAddress(query.trim());
   if (!results.length) {
-    alert('Адрес не найден: ' + query);
+    alert('Адрес не найден: ' + query + '\nПопробуйте ввести только название улицы.');
     return;
   }
   const first = results[0];
-  setter(first.latlng);
-  // Летим к зданию и приближаемся
+  setter(first.latlng, first.label);
   map.flyTo(first.latlng, 17, { duration: 1.2 });
-  // Обновляем поле ввода красивым названием
   const inputId = setter === setFrom ? 'fromInput' : 'toInput';
   document.getElementById(inputId).value = first.label;
 }
@@ -101,7 +144,7 @@ function attachAutocomplete(inputId, suggestId, setter) {
 
       list.innerHTML = '';
       if (!results.length) {
-        list.innerHTML = '<li style="color:#6b7a99;cursor:default">Ничего не найдено</li>';
+        list.innerHTML = '<li style="color:#6b7a99;cursor:default">Ничего не найдено. Нажмите Enter для поиска только по улице.</li>';
         return;
       }
       results.forEach(item => {
@@ -110,8 +153,7 @@ function attachAutocomplete(inputId, suggestId, setter) {
         li.addEventListener('click', () => {
           input.value = item.label;
           list.classList.remove('visible');
-          setter(item.latlng);
-          // Летим к выбранному зданию и приближаемся
+          setter(item.latlng, item.label);
           map.flyTo(item.latlng, 17, { duration: 1.2 });
         });
         list.appendChild(li);
@@ -148,7 +190,7 @@ async function resolveAddressIfNeeded(inputId, currentPoint, setter) {
   if (!text) return null;
   const results = await searchAddress(text);
   if (results.length) {
-    setter(results[0].latlng);
+    setter(results[0].latlng, results[0].label);
     return results[0].latlng;
   }
   return null;
