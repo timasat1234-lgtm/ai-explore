@@ -1,5 +1,5 @@
 window.CONFIG = {
-  GEMINI_API_KEY: '',
+  GEMINI_API_KEY: 'AQ.Ab8RN6LB1y-358bKwwcvtw4jpGGClr8bb95L_spRHFWFs8MyIQ',
   GEMINI_MODEL: 'gemini-2.5-flash',
 
   // Два профиля OSRM на сервере FOSSGIS
